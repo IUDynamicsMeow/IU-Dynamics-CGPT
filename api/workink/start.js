@@ -18,7 +18,8 @@ module.exports = async function handler(req, res) {
     const settings = await db("iu_settings?select=value&key=eq.provider_workink_enabled&limit=1");
     if (!settings?.length || settings[0].value !== true) return res.status(503).json({ error: "Work.ink is temporarily disabled." });
     const attemptId = crypto.randomUUID();
-    const destination = new URL("/api/workink/return", process.env.APP_URL || "https://iu-dynamics.vercel.app");
+    const appUrl = process.env.APP_URL || (process.env.VERCEL_ENV === "production" ? "https://iu-dynamics.vercel.app" : process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://iu-dynamics.vercel.app");
+    const destination = new URL("/api/workink/return", appUrl);
     destination.searchParams.set("session", sessionToken);
     destination.searchParams.set("attempt", attemptId);
     destination.searchParams.set("token", "{TOKEN}");
