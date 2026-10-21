@@ -1,28 +1,34 @@
-# IU Dynamics access starter
+# IU Dynamics access application
 
-This is a starter application for the IU Dynamics plan and Work.ink verification flow. It is **not production-ready for license delivery** yet.
+IU Dynamics is a Vercel-hosted software-key access site using Supabase for plan, session, provider-attempt and license inventory data.
 
-## Includes
-- Static plan selector reading active plans from Supabase
-- Server-side session creation; only a SHA-256 hash of the session token is stored
-- Work.ink Link Override setup and token verification return handler
-- Server-side Supabase service key usage only
+## Current capabilities in this branch
+- Four existing plans: Super Basic (1 link), Basic (2), Epic (5), Ultimate (10).
+- Server-side Work.ink link override and token verification. Verification uses Work.ink's documented `/_api/v2/token/isValid/{token}?deleteToken=1` endpoint; test this in a preview with a real token before public launch.
+- Provider selection is per session. Cuty.io is deliberately fail-closed and not offered to customers until its account-supported developer API provides a reliable server-side completion-verification contract. Creating a short link or seeing a redirect is not proof of completion.
+- Atomic one-time key claim RPC: only an unlocked, unexpired session can claim one available key, and the key and session are marked claimed in one database transaction.
+- Admin panel at `/admin.html`, protected server-side by Supabase Auth plus the active allowlist in `public.iu_admins`.
+- Admin can adjust plan requirements, enable/disable providers, bulk add keys and remove unused keys. Key values are not returned by the inventory API. Changes are audited.
 
 ## Required Vercel environment variables
 - `NEXT_PUBLIC_SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY` (server-only; never prefix this with `NEXT_PUBLIC_`)
-- `WORKINK_KEY_LINK_URL` (the Work.ink link configured for the key system)
-- `WORKINK_API_KEY` (server-only)
-- `APP_URL` (recommended: `https://iu-dynamics.vercel.app`)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; never expose in frontend code)
+- `WORKINK_KEY_LINK_URL`
+- `WORKINK_API_KEY`
+- `APP_URL=https://iu-dynamics.vercel.app` (recommended)
 
-Set variables for Production and Preview as appropriate, then redeploy.
+## Supabase Auth setup
+- Enable email magic-link sign-in.
+- Add `https://iu-dynamics.vercel.app/admin.html` to the allowed redirect URLs.
+- The server verifies the Auth token and checks the user's normalized email against `public.iu_admins` on every admin API call. Client-side allowlists are not authorization.
 
-## Critical remaining work before public launch
-1. Confirm Work.ink's current Link Override and token verification response format against the account's live documentation.
-2. Add rate limiting / abuse controls to session creation and link starts.
-3. Implement a secure, atomic key-claim RPC/function and a claim UI. No key is delivered by this starter.
-4. Confirm Cuty.io offers a trustworthy server-side completion verification method before counting any Cuty link.
-5. Test with dummy data in a preview deployment, verify RLS and database grants, then test the complete lifecycle.
-6. Do not unlock based only on a redirect or click statistic.
+## Database
+Apply the SQL files under `supabase/migrations` to the project, or confirm the equivalent migrations are present. The RPC is executable only by `service_role`; browser roles cannot call it. Existing sessions keep the `required_links` value captured at session creation.
 
-The GitHub integration rejected repository writes with HTTP 403 (`Resource not accessible by integration`) during setup. The files were packaged locally instead; no GitHub commit or Vercel deployment was made.
+## Before public launch
+1. Verify Work.ink override + token callback end-to-end in a Vercel Preview deployment using a dummy key.
+2. Keep Cuty.io disabled until a trusted server-side completion verification method is confirmed and implemented.
+3. Add real software keys through the admin panel; the current inventory was empty during implementation.
+4. Test duplicate callbacks, expired sessions, concurrent claim requests, no-stock behavior, admin allowlist rejection and provider-disable behavior.
+5. Add request rate limits/abuse controls before promotion. Never unlock on a client-supplied flag, click count or redirect alone.
