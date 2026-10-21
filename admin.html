@@ -13,8 +13,8 @@
 <div id="status" class="status" role="status" aria-live="polite"></div>
 <section id="login" class="panel">
 <h2>Administrator sign-in</h2>
-<p>Enter your allowlisted administrator email. We’ll send a secure sign-in link.</p>
-<form id="loginform"><div class="field"><label for="email">Email address</label><input id="email" type="email" autocomplete="email" required maxlength="254"></div><button id="sendlink" type="submit">Send sign-in link</button></form>
+<p>Sign in with your administrator email and password.</p>
+<form id="loginform"><div class="field"><label for="email">Email address</label><input id="email" type="email" autocomplete="username" required maxlength="254"></div><div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required maxlength="256"></div><button id="loginbutton" type="submit">Sign in</button></form>
 <p class="small">Only accounts enabled in the server-side administrator allowlist can access these controls.</p>
 </section>
 <div id="dashboard" class="hidden">
@@ -82,7 +82,7 @@ function render(){
  const audit=$('audit');audit.replaceChildren();for(const a of config.audit||[]){const tr=document.createElement('tr');const details=JSON.stringify(a.details||{});for(const v of [safeDate(a.created_at),a.actor_email,a.action,(a.target_type||'')+(a.target_id?' · '+a.target_id:''),details]){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}audit.append(tr)}
 }
 async function refresh(){try{await loadDashboard()}catch(e){showStatus(e.message,true)}}
-$('loginform').addEventListener('submit',async e=>{e.preventDefault();clearStatus();$('sendlink').disabled=true;try{const email=$('email').value.trim();const {error}=await client.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+'/admin.html',shouldCreateUser:false}});if(error)throw error;showStatus('If this address is enabled for administrator access, a sign-in link has been sent. Check your email.')}catch(e){showStatus(e.message||'Could not send sign-in link.',true)}finally{$('sendlink').disabled=false}});
+$('loginform').addEventListener('submit',async e=>{e.preventDefault();clearStatus();$('loginbutton').disabled=true;try{const email=$('email').value.trim();const password=$('password').value;const {data,error}=await client.auth.signInWithPassword({email,password});if(error)throw error;if(!data.session)throw new Error('Sign-in could not be completed. Check your credentials and try again.');currentSession=data.session;await loadDashboard()}catch(e){showStatus('Sign-in failed. Check the email and password, and make sure this account is enabled for administrator access.',true)}finally{$('loginbutton').disabled=false}});
 $('signout').addEventListener('click',async()=>{await client?.auth.signOut();currentSession=null;showLogin();showStatus('You have signed out.')});
 $('saveproviders').addEventListener('click',async()=>{try{await api('/api/admin/config',{method:'PUT',body:JSON.stringify({providers:{cuty:$('cuty').checked,workink:$('workink').checked}})});showStatus('Provider settings saved.');await refresh()}catch(e){showStatus(e.message,true)}});
 $('saveplans').addEventListener('click',async()=>{try{const plans=config.plans.map(p=>({slug:p.slug,required_links:Number(document.querySelector('input[type=number][data-slug="'+p.slug+'"]').value),is_active:document.querySelector('input[type=checkbox][data-slug="'+p.slug+'"]').checked}));await api('/api/admin/config',{method:'PUT',body:JSON.stringify({plans})});showStatus('Plan settings saved.');await refresh()}catch(e){showStatus(e.message,true)}});
