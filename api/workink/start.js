@@ -21,6 +21,7 @@ module.exports = async function handler(req, res) {
     const destination = new URL("/api/workink/return", process.env.APP_URL || "https://iu-dynamics.vercel.app");
     destination.searchParams.set("session", sessionToken);
     destination.searchParams.set("attempt", attemptId);
+    destination.searchParams.set("token", "{TOKEN}");
     const overrideUrl = new URL("https://work.ink/_api/v2/override");
     overrideUrl.searchParams.set("destination", destination.toString());
     const overrideResponse = await fetch(overrideUrl, { headers: { "X-Api-Key": apiKey } });
