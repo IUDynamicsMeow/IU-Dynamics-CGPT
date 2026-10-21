@@ -27,7 +27,7 @@ begin
  select s.* into v_session from public.iu_unlock_sessions s where s.session_token_hash = p_session_token_hash and s.status = 'unlocked' and s.expires_at > now() for update;
  if not found then return; end if;
  select p.slug into v_plan_slug from public.iu_plans p where p.id = v_session.plan_id;
- select a.* into v_account from public.iu_accounts a where a.plan_id = v_session.plan_id and a.status = 'available' order by a.created_at, a.id for update skip locked limit 1;
+ select a.* into v_account from public.iu_accounts a where a.plan_id = v_session.plan_id and a.status = 'available' order by a.created_at, a.id limit 1 for update skip locked;
  if not found then return; end if;
  update public.iu_accounts set status = 'claimed', claimed_at = now(), claim_reference = v_session.id where id = v_account.id;
  update public.iu_unlock_sessions set status = 'claimed', claimed_at = now() where id = v_session.id;
