@@ -58,7 +58,7 @@ async function audit(actor, action, targetType, targetId, details = {}) {
 }
 
 function fail(res, error) {
-  const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;
+  const status = [401, 403].includes(error?.statusCode) ? error.statusCode : 500;
   return res.status(status).json({
     error: status === 500 ? "The admin request could not be completed. Please try again." : error.message
   });
