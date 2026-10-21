@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     if (!session || session.provider !== "workink" || session.status !== "in_progress" || new Date(session.expires_at) <= new Date())
       return res.redirect(302, home + "/?unlock=session-expired");
     const attempts = await db("iu_link_attempts?select=id,status&session_id=eq." + session.id + "&id=eq." + encodeURIComponent(attemptId) + "&provider=eq.workink&limit=1");
-    if (!attempts?.length || attempts[0].status === "verified")
+    if (!attempts?.length || attempts[0].status !== "created")
       return res.redirect(302, home + "/?unlock=not-verified");
     // Work.ink's documented Key System endpoint is /token/isValid/{token}.
     // deleteToken=1 makes each completion token single-use.
