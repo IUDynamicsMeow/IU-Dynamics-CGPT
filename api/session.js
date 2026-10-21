@@ -28,7 +28,8 @@ module.exports = async function handler(req, res) {
         required_links: plans[0].required_links, provider, status: "in_progress", expires_at: expiresAt
       }])
     });
-    return res.status(201).json({ sessionToken, expiresAt, requiredLinks: plans[0].required_links, provider });
+    res.setHeader("Set-Cookie", "iu_session=" + sessionToken + "; Path=/; Max-Age=7200; HttpOnly; Secure; SameSite=Lax");
+    return res.status(201).json({ expiresAt, requiredLinks: plans[0].required_links, provider });
   } catch {
     return res.status(503).json({ error: "Could not create an access session. Please try again later." });
   }
