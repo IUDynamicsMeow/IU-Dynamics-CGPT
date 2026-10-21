@@ -26,9 +26,9 @@ module.exports = async function handler(req, res) {
       const username = typeof body.username === "string" ? body.username.trim() : "";
       const password = typeof body.password === "string" ? body.password : "";
       if (!allowedPlans.includes(body.planSlug)) return res.status(400).json({ error: "Choose a valid plan." });
-      if (!username || username.length > 200 || /[\\u0000-\\u001f\\u007f]/.test(username))
+      if (!username || username.length > 200 || /[\u0000-\u001f\u007f]/.test(username))
         return res.status(400).json({ error: "Username is required and must be 200 characters or fewer." });
-      if (!password || password.length > 1000 || /[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/.test(password))
+      if (!password || password.length > 1000 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(password))
         return res.status(400).json({ error: "Password is required and must be 1,000 characters or fewer." });
       const plans = await db("iu_plans?select=id&slug=eq." + encodeURIComponent(body.planSlug) + "&limit=1");
       if (!plans?.length) return res.status(400).json({ error: "That plan does not exist." });
