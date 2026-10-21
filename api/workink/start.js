@@ -1,5 +1,10 @@
 const crypto = require("node:crypto");
 const { db } = require("../_lib/supabase");
+function cookieValue(req, name) {
+  const raw = req.headers?.cookie || "";
+  const pair = raw.split(";").map(s => s.trim()).find(s => s.startsWith(name + "="));
+  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : "";
+}
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -7,9 +12,9 @@ module.exports = async function handler(req, res) {
   const baseLink = process.env.WORKINK_KEY_LINK_URL, apiKey = process.env.WORKINK_API_KEY;
   if (!baseLink || !apiKey) return res.status(503).json({ error: "The link provider is not configured." });
   try {
-    const sessionToken = req.body?.sessionToken;
-    if (typeof sessionToken !== "string" || sessionToken.length < 40 || sessionToken.length > 100)
-      return res.status(400).json({ error: "Invalid access session." });
+    const sessionToken = cookieValue(req, "iu_session");
+    if (sessionToken.length < 40 || sessionToken.length > 100)
+      return res.status(400).json({ error: "Your access session is missing. Please start again." });
     const hash = crypto.createHash("sha256").update(sessionToken).digest("hex");
     const sessions = await db("iu_unlock_sessions?select=id,provider,required_links,status,expires_at&session_token_hash=eq." + hash + "&limit=1");
     const session = sessions?.[0];
@@ -20,7 +25,6 @@ module.exports = async function handler(req, res) {
     const attemptId = crypto.randomUUID();
     const appUrl = process.env.APP_URL || (process.env.VERCEL_ENV === "production" ? "https://iu-dynamics.vercel.app" : process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://iu-dynamics.vercel.app");
     const destination = new URL("/api/workink/return", appUrl);
-    destination.searchParams.set("session", sessionToken);
     destination.searchParams.set("attempt", attemptId);
     destination.searchParams.set("token", "{TOKEN}");
     const overrideUrl = new URL("https://work.ink/_api/v2/override");
