@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const { db } = require("./_lib/supabase");
+const { allowRequest } = require("./_lib/rate-limit");
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -9,6 +10,7 @@ module.exports = async function handler(req, res) {
     const provider = typeof req.body?.provider === "string" ? req.body.provider : "workink";
     if (!/^[a-z0-9_-]{2,40}$/.test(slug)) return res.status(400).json({ error: "Choose a valid plan." });
     if (!["workink", "cuty"].includes(provider)) return res.status(400).json({ error: "Choose a valid link provider." });
+    if (!(await allowRequest(req, "session-create", 8))) return res.status(429).json({ error: "Too many attempts. Please wait a few minutes before starting another session." });
     if (provider !== "workink") return res.status(503).json({ error: "Cuty.io completion verification is not ready yet. Please use Work.ink." });
     if (!process.env.WORKINK_KEY_LINK_URL || !process.env.WORKINK_API_KEY)
       return res.status(503).json({ error: "Work.ink is not configured yet." });
