@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const { db } = require("./_lib/supabase");
+const { allowRequest } = require("./_lib/rate-limit");
 function cookieValue(req, name) {
   const raw = req.headers?.cookie || "";
   const pair = raw.split(";").map(s => s.trim()).find(s => s.startsWith(name + "="));
@@ -14,6 +15,7 @@ module.exports = async function handler(req, res) {
   if (sessionToken.length < 40 || sessionToken.length > 100)
     return res.status(400).json({ error: "Your access session is invalid. Start again." });
   try {
+    if (!(await allowRequest(req, "license-claim", 5))) return res.status(429).json({ error: "Too many claim attempts. Please wait a few minutes and try again." });
     const hash = crypto.createHash("sha256").update(sessionToken).digest("hex");
     const result = await db("rpc/claim_iu_license_key", {
       method: "POST",
