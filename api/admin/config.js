@@ -14,7 +14,8 @@ module.exports = async function handler(req, res) {
       ]);
       const values = Object.fromEntries((settings || []).map(s => [s.key, s.value]));
       return res.status(200).json({
-        providers: { cuty: values.provider_cuty_enabled === true, workink: values.provider_workink_enabled === true },
+        providers: { cuty: false, workink: values.provider_workink_enabled === true },
+        providerReadiness: { cuty: false, workink: Boolean(process.env.WORKINK_KEY_LINK_URL && process.env.WORKINK_API_KEY) },
         plans: plans || [],
         audit: audits || []
       });
@@ -22,15 +23,19 @@ module.exports = async function handler(req, res) {
     if (req.method !== "PUT") return res.status(405).json({ error: "Method not allowed." });
     const body = parseBody(req);
     if (body.providers && typeof body.providers === "object") {
+      if (body.providers.cuty === true) {
+        return res.status(400).json({ error: "Cuty.io cannot be enabled until its trusted server-side completion verification is implemented and tested." });
+      }
       for (const provider of ["cuty", "workink"]) {
         if (typeof body.providers[provider] !== "boolean") continue;
         const key = "provider_" + provider + "_enabled";
+        const enabled = provider === "cuty" ? false : body.providers[provider];
         await db("iu_settings?on_conflict=key", {
           method: "POST",
           headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-          body: JSON.stringify([{ key, value: body.providers[provider], updated_at: new Date().toISOString(), updated_by: admin.email }])
+          body: JSON.stringify([{ key, value: enabled, updated_at: new Date().toISOString(), updated_by: admin.email }])
         });
-        await audit(admin.email, "provider_setting_changed", "provider", provider, { enabled: body.providers[provider] });
+        await audit(admin.email, "provider_setting_changed", "provider", provider, { enabled });
       }
     }
     if (Array.isArray(body.plans)) {
@@ -54,9 +59,7 @@ module.exports = async function handler(req, res) {
         if (Object.keys(changes).length) {
           changes.updated_at = new Date().toISOString();
           await db("iu_plans?slug=eq." + encodeURIComponent(p.slug), {
-            method: "PATCH",
-            headers: { Prefer: "return=minimal" },
-            body: JSON.stringify(changes)
+            method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(changes)
           });
           await audit(admin.email, "plan_updated", "plan", p.slug, changes);
         }
