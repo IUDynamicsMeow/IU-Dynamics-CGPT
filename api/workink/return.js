@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   const sessionToken = typeof req.query?.session === "string" ? req.query.session : "";
   const attemptId = typeof req.query?.attempt === "string" ? req.query.attempt : "";
   const token = typeof req.query?.token === "string" ? req.query.token : "";
-  const home = process.env.APP_URL || "https://iu-dynamics.vercel.app";
+  const home = process.env.APP_URL || (process.env.VERCEL_ENV === "production" ? "https://iu-dynamics.vercel.app" : process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://iu-dynamics.vercel.app");
   if (!sessionToken || !attemptId || !token || sessionToken.length < 40 || sessionToken.length > 100)
     return res.redirect(302, home + "/?unlock=not-verified");
   try {
