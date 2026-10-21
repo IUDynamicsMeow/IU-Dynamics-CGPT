@@ -19,8 +19,9 @@ IU Dynamics is a Vercel-hosted software-key access site using Supabase for plan,
 - `APP_URL=https://iu-dynamics.vercel.app` (recommended)
 
 ## Supabase Auth setup
-- Enable email magic-link sign-in.
-- Add `https://iu-dynamics.vercel.app/admin.html` to the allowed redirect URLs.
+- Enable email/password sign-in in Supabase Auth.
+- Ensure the intended administrator exists as a Supabase Auth user and has a password set; do not enable public signups just for admin access.
+- Keep the active `public.iu_admins` allowlist as the server-side authorization gate. The login form alone does not grant admin privileges.
 - The server verifies the Auth token and checks the user's normalized email against `public.iu_admins` on every admin API call. Client-side allowlists are not authorization.
 
 ## Database
