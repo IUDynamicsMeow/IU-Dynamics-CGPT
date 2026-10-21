@@ -8,12 +8,12 @@ module.exports = async function handler(req, res) {
     admin = await requireAdmin(req);
     if (req.method === "GET") {
       const [accounts, plans] = await Promise.all([
-        db("iu_accounts?select=id,plan_id,status,claimed_at,created_at&order=created_at.desc&limit=500"),
+        db("iu_accounts?select=id,plan_id,username,status,claimed_at,created_at&order=created_at.desc&limit=500"),
         db("iu_plans?select=id,slug,display_name")
       ]);
       const byId = Object.fromEntries((plans || []).map(p => [p.id, p]));
       const inventory = (accounts || []).map(a => ({
-        id: a.id, planSlug: byId[a.plan_id]?.slug || "unknown",
+        id: a.id, username: a.username, planSlug: byId[a.plan_id]?.slug || "unknown",
         planName: byId[a.plan_id]?.display_name || "Unknown plan",
         status: a.status, claimedAt: a.claimed_at, createdAt: a.created_at
       }));
