@@ -1,14 +1,19 @@
 const crypto = require("node:crypto");
 const { db } = require("../_lib/supabase");
+function cookieValue(req, name) {
+  const raw = req.headers?.cookie || "";
+  const pair = raw.split(";").map(s => s.trim()).find(s => s.startsWith(name + "="));
+  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : "";
+}
 module.exports = async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("X-Content-Type-Options", "nosniff");
   if (req.method !== "GET") return res.status(405).send("Method not allowed.");
-  const sessionToken = typeof req.query?.session === "string" ? req.query.session : "";
+  const sessionToken = cookieValue(req, "iu_session");
   const attemptId = typeof req.query?.attempt === "string" ? req.query.attempt : "";
   const token = typeof req.query?.token === "string" ? req.query.token : "";
   const home = process.env.APP_URL || (process.env.VERCEL_ENV === "production" ? "https://iu-dynamics.vercel.app" : process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://iu-dynamics.vercel.app");
-  if (!sessionToken || !attemptId || !token || sessionToken.length < 40 || sessionToken.length > 100)
+  if (sessionToken.length < 40 || sessionToken.length > 100 || !attemptId || !token)
     return res.redirect(302, home + "/?unlock=not-verified");
   try {
     const hash = crypto.createHash("sha256").update(sessionToken).digest("hex");
