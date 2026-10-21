@@ -26,7 +26,7 @@ IU Dynamics is a Vercel-hosted software-key access site using Supabase for plan,
 ## Database
 Apply the SQL files under `supabase/migrations` to the project, or confirm the equivalent migrations are present. The RPC is executable only by `service_role`; browser roles cannot call it. Existing sessions keep the `required_links` value captured at session creation.
 
-## Before public launch
+## Security headers\n\n`vercel.json` applies HTTPS-only transport, clickjacking protection, MIME-sniffing protection, a restrictive Content Security Policy, no-referrer behavior, and a minimal permissions policy. The current CSP allows inline code because the static HTML pages contain inline scripts and styles; moving those to separate versioned files or using nonces would permit a stricter policy.\n\n## Before public launch
 1. Verify Work.ink override + token callback end-to-end in a Vercel Preview deployment using a dummy key.
 2. Keep Cuty.io disabled until a trusted server-side completion verification method is confirmed and implemented.
 3. Add real software keys through the admin panel; the current inventory was empty during implementation.
