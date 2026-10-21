@@ -34,7 +34,7 @@
 <p class="small muted">Credentials are stored server-side and are only revealed to a customer after verified completion. Add accounts one at a time.</p>
 <button id="addaccount" type="submit">Add account securely</button></form>
 </section>
-<section class="panel"><h2>Account inventory</h2><div class="table-wrap"><table><thead><tr><th>Plan</th><th>Status</th><th>Added</th><th>Claimed</th><th>Action</th></tr></thead><tbody id="keys"></tbody></table></div><p id="keynote" class="small muted"></p></section>
+<section class="panel"><h2>Account inventory</h2><div class="table-wrap"><table><thead><tr><th>Plan</th><th>Username</th><th>Status</th><th>Added</th><th>Claimed</th><th>Action</th></tr></thead><tbody id="keys"></tbody></table></div><p id="keynote" class="small muted"></p></section>
 <section class="panel"><h2>Recent admin activity</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody id="audit"></tbody></table></div></section>
 </div>
 </main>
@@ -78,7 +78,7 @@ function render(){
  }
  const stats=$('stats');stats.replaceChildren();for(const [name,value] of Object.entries(inventory.counts)){const card=document.createElement('div');card.className='stat';const strong=document.createElement('strong');strong.textContent=value;const label=document.createElement('span');label.textContent=name;card.append(strong,label);stats.append(card)}
  const tbody=$('keys');tbody.replaceChildren();
- for(const k of inventory.accounts){const tr=document.createElement('tr');for(const v of [k.planName,k.status,safeDate(k.createdAt),safeDate(k.claimedAt)]){const td=document.createElement('td');td.textContent=v;tr.append(td)}
+ for(const k of inventory.accounts){const tr=document.createElement('tr');for(const v of [k.planName,k.username,k.status,safeDate(k.createdAt),safeDate(k.claimedAt)]){const td=document.createElement('td');td.textContent=v;tr.append(td)}
  const action=document.createElement('td');if(k.status==='available'){const b=document.createElement('button');b.className='danger';b.textContent='Remove';b.addEventListener('click',()=>removeAccount(k.id));action.append(b)}else action.textContent='—';tr.append(action);tbody.append(tr)}
  $('keynote').textContent=inventory.truncated?'Showing the latest 500 records. Counts reflect these listed records.':'Usernames and passwords are deliberately excluded from this list.';
  const audit=$('audit');audit.replaceChildren();for(const a of config.audit||[]){const tr=document.createElement('tr');const details=JSON.stringify(a.details||{});for(const v of [safeDate(a.created_at),a.actor_email,a.action,(a.target_type||'')+(a.target_id?' · '+a.target_id:''),details]){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}audit.append(tr)}
