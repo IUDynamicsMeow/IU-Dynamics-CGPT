@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827"><title>IU Dynamics — Admin</title>
+<style>
+:root{color-scheme:dark;--bg:#090b10;--panel:#12151c;--line:#2a303b;--text:#f4f5f7;--muted:#a1a8b5;--accent:#eceef2;--danger:#ffb4b4}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#292e39 0,transparent 43%),var(--bg);color:var(--text);font:14px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}main{max-width:1180px;margin:auto;padding:30px 24px 70px}header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:26px;padding-bottom:22px;border-bottom:1px solid #272c36}h1{font-size:clamp(1.8rem,4vw,2.5rem);letter-spacing:-.06em;margin:0}h2{font-size:15px;letter-spacing:-.025em;margin:0 0 14px}p{color:var(--muted)}header p{font-size:12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}.panel{background:linear-gradient(145deg,#171b23,#11141a);border:1px solid var(--line);border-radius:16px;padding:21px;margin-bottom:16px;box-shadow:0 16px 45px #00000012}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.between{justify-content:space-between}.field{display:grid;gap:6px;margin:12px 0}label{color:var(--muted)}input,textarea,select{width:100%;border:1px solid #353b47;border-radius:9px;background:#0b0d12;color:var(--text);padding:11px;font:inherit;outline:none}input:focus,textarea:focus,select:focus{border-color:#bfc5d0;box-shadow:0 0 0 3px #ffffff12}textarea{min-height:140px;resize:vertical}button{border:1px solid #f0f1f4;border-radius:9px;background:#eceef2;color:#111318;padding:10px 14px;font:inherit;font-size:12px;font-weight:750;cursor:pointer;transition:background .15s,transform .15s}button:hover{background:#fff;transform:translateY(-1px)}button:disabled{opacity:.5;cursor:not-allowed;transform:none}.secondary{background:#242a34;border-color:#3a414e;color:var(--text)}.secondary:hover{background:#303744}.danger{background:#422025;border-color:#633d42;color:#ffd6d6}.danger:hover{background:#59262d}.status{border:1px solid #353b47;border-radius:10px;padding:12px 14px;margin:16px 0;white-space:pre-wrap;display:none;background:#171b23}.error{border-color:#633d42;color:var(--danger);background:#211518}.muted{color:var(--muted)}.toggle{display:flex;align-items:center;gap:10px;margin:12px 0}.toggle input{width:auto;accent-color:#f4f5f7}.plans{display:grid;gap:10px}.plan{display:grid;grid-template-columns:minmax(110px,1fr) minmax(100px,140px) auto;align-items:center;gap:12px;border-bottom:1px solid #2b303a;padding:10px 0}.plan:last-child{border-bottom:0}.plan label{font-weight:700;color:var(--text)}.stats{display:flex;gap:10px;flex-wrap:wrap}.stat{background:#0b0d12;border:1px solid #2c323d;border-radius:11px;padding:11px 14px;min-width:95px}.stat strong{display:block;font-size:1.45rem;letter-spacing:-.05em}.stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}.table-wrap{overflow:auto;border:1px solid #2a303a;border-radius:10px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{text-align:left;padding:11px 12px;border-bottom:1px solid #2a303a;white-space:nowrap}th{color:#a1a8b5;font-weight:650;background:#0d1016}td{color:#d9dce3}tbody tr:last-child td{border-bottom:0}.pill{display:inline-block;border-radius:99px;background:#252b35;padding:3px 9px;font-size:.8rem}.hidden{display:none!important}.small{font-size:11px;line-height:1.6}.toggle input:disabled{opacity:.45}@media(max-width:560px){main{padding:20px 14px 45px}header{align-items:flex-start}.panel{padding:16px}.plan{grid-template-columns:1fr 90px}.plan .active{grid-column:1/-1}.plan .plan-name{grid-column:1/-1}th,td{padding:9px}}
+</style>
+</head>
+<body><main>
+<header><div><h1>IU Dynamics Admin</h1><p style="margin:4px 0 0">Manage access plans, providers and license inventory.</p></div><button id="signout" class="secondary hidden">Sign out</button></header>
+<div id="status" class="status" role="status" aria-live="polite"></div>
+<section id="login" class="panel">
+<h2>Administrator sign-in</h2>
+<p>Enter your allowlisted administrator email. We’ll send a secure sign-in link.</p>
+<form id="loginform"><div class="field"><label for="email">Email address</label><input id="email" type="email" autocomplete="email" required maxlength="254"></div><button id="sendlink" type="submit">Send sign-in link</button></form>
+<p class="small">Only accounts enabled in the server-side administrator allowlist can access these controls.</p>
+</section>
+<div id="dashboard" class="hidden">
+<div class="grid">
+<section class="panel"><h2>Link providers</h2>
+<label class="toggle"><input id="cuty" type="checkbox" disabled> Enable Cuty.io</label>
+<label class="toggle"><input id="workink" type="checkbox"> Enable Work.ink</label>
+<p class="small">Work.ink can be enabled here. Cuty.io is still being set up. It stays locked until trusted server-side completion verification is confirmed; creating a short link is not proof of completion.</p>
+<button id="saveproviders">Save provider settings</button></section>
+<section class="panel"><h2>Inventory overview</h2><div id="stats" class="stats"></div><p class="small">Key values are not shown in the inventory list. Claimed keys cannot be removed here.</p><button id="refresh" class="secondary">Refresh data</button></section>
+</div>
+<section class="panel"><h2>Access plans</h2><p>Link-count changes apply to new sessions; sessions already started keep their original requirement.</p><div id="plans" class="plans"></div><div class="row" style="margin-top:14px"><button id="saveplans">Save plan changes</button></div></section>
+<section class="panel"><h2>Add license keys</h2>
+<form id="keyform"><div class="field"><label for="keyplan">Plan</label><select id="keyplan" required></select></div>
+<div class="field"><label for="keylist">Keys (one per line; up to 200)</label><textarea id="keylist" required placeholder="Paste one software key per line"></textarea></div>
+<button id="addkeys" type="submit">Add keys securely</button></form>
+</section>
+<section class="panel"><h2>Key inventory</h2><div class="table-wrap"><table><thead><tr><th>Plan</th><th>Status</th><th>Added</th><th>Claimed</th><th>Action</th></tr></thead><tbody id="keys"></tbody></table></div><p id="keynote" class="small muted"></p></section>
+<section class="panel"><h2>Recent admin activity</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody id="audit"></tbody></table></div></section>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.0/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+<script>
+let client=null, currentSession=null, config=null, inventory=null;
+const $=id=>document.getElementById(id);
+function showStatus(message,isError=false){const el=$('status');el.textContent=message;el.style.display='block';el.classList.toggle('error',isError)}
+function clearStatus(){const el=$('status');el.style.display='none';el.classList.remove('error');el.textContent=''}
+function safeDate(value){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleString()}
+async function init(){
+ try{
+  const r=await fetch('/api/public-config',{cache:'no-store'});const cfg=await r.json();if(!r.ok)throw new Error(cfg.error||'Admin sign-in is not configured.');
+  if(!window.supabase?.createClient)throw new Error('The sign-in library could not be loaded. Refresh the page.');
+  client=window.supabase.createClient(cfg.url,cfg.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  client.auth.onAuthStateChange((_event,session)=>{currentSession=session;setTimeout(()=>session?loadDashboard():showLogin(),0)});
+  const {data,error}=await client.auth.getSession();if(error)throw error;currentSession=data.session;
+  if(currentSession)await loadDashboard();else showLogin();
+ }catch(e){showStatus(e.message||'Could not initialize admin sign-in.',true)}
+}
+function showLogin(){$('login').classList.remove('hidden');$('dashboard').classList.add('hidden');$('signout').classList.add('hidden')}
+async function api(path,options={}){
+ if(!currentSession?.access_token)throw new Error('Sign in again to continue.');
+ const r=await fetch(path,{...options,headers:{'content-type':'application/json','authorization':'Bearer '+currentSession.access_token,...(options.headers||{})},cache:'no-store'});
+ const data=await r.json().catch(()=>({error:'Unexpected server response'}));if(!r.ok)throw new Error(data.error||'Request failed.');return data;
+}
+async function loadDashboard(){
+ try{config=await api('/api/admin/config');inventory=await api('/api/admin/keys');render();$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');$('signout').classList.remove('hidden');clearStatus()}
+ catch(e){showStatus(e.message,true);if(/sign in|authorized|expired/i.test(e.message)){await client.auth.signOut();showLogin()}}
+}
+function render(){
+ $('cuty').checked=!!config.providers.cuty;$('workink').checked=!!config.providers.workink;
+ const plansEl=$('plans'),keyPlan=$('keyplan');plansEl.replaceChildren();keyPlan.replaceChildren();
+ for(const p of config.plans){
+  const row=document.createElement('div');row.className='plan';
+  const name=document.createElement('label');name.className='plan-name';name.textContent=p.display_name;
+  const count=document.createElement('input');count.type='number';count.min='1';count.max='50';count.step='1';count.value=p.required_links;count.dataset.slug=p.slug;count.setAttribute('aria-label',p.display_name+' required links');
+  const activeWrap=document.createElement('label');activeWrap.className='active toggle';const active=document.createElement('input');active.type='checkbox';active.checked=!!p.is_active;active.dataset.slug=p.slug;active.setAttribute('aria-label',p.display_name+' active');activeWrap.append(active,document.createTextNode('Available'));
+  row.append(name,count,activeWrap);plansEl.append(row);
+  const option=document.createElement('option');option.value=p.slug;option.textContent=p.display_name;keyPlan.append(option);
+ }
+ const stats=$('stats');stats.replaceChildren();for(const [name,value] of Object.entries(inventory.counts)){const card=document.createElement('div');card.className='stat';const strong=document.createElement('strong');strong.textContent=value;const label=document.createElement('span');label.textContent=name;card.append(strong,label);stats.append(card)}
+ const tbody=$('keys');tbody.replaceChildren();
+ for(const k of inventory.keys){const tr=document.createElement('tr');for(const v of [k.planName,k.status,safeDate(k.createdAt),safeDate(k.claimedAt)]){const td=document.createElement('td');td.textContent=v;tr.append(td)}
+ const action=document.createElement('td');if(k.status==='available'){const b=document.createElement('button');b.className='danger';b.textContent='Remove';b.addEventListener('click',()=>removeKey(k.id));action.append(b)}else action.textContent='—';tr.append(action);tbody.append(tr)}
+ $('keynote').textContent=inventory.truncated?'Showing the latest 500 records. Counts reflect these listed records.':'Key values are deliberately excluded from this list.';
+ const audit=$('audit');audit.replaceChildren();for(const a of config.audit||[]){const tr=document.createElement('tr');const details=JSON.stringify(a.details||{});for(const v of [safeDate(a.created_at),a.actor_email,a.action,(a.target_type||'')+(a.target_id?' · '+a.target_id:''),details]){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}audit.append(tr)}
+}
+async function refresh(){try{await loadDashboard()}catch(e){showStatus(e.message,true)}}
+$('loginform').addEventListener('submit',async e=>{e.preventDefault();clearStatus();$('sendlink').disabled=true;try{const email=$('email').value.trim();const {error}=await client.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+'/admin.html',shouldCreateUser:false}});if(error)throw error;showStatus('If this address is enabled for administrator access, a sign-in link has been sent. Check your email.')}catch(e){showStatus(e.message||'Could not send sign-in link.',true)}finally{$('sendlink').disabled=false}});
+$('signout').addEventListener('click',async()=>{await client?.auth.signOut();currentSession=null;showLogin();showStatus('You have signed out.')});
+$('saveproviders').addEventListener('click',async()=>{try{await api('/api/admin/config',{method:'PUT',body:JSON.stringify({providers:{cuty:$('cuty').checked,workink:$('workink').checked}})});showStatus('Provider settings saved.');await refresh()}catch(e){showStatus(e.message,true)}});
+$('saveplans').addEventListener('click',async()=>{try{const plans=config.plans.map(p=>({slug:p.slug,required_links:Number(document.querySelector('input[type=number][data-slug="'+p.slug+'"]').value),is_active:document.querySelector('input[type=checkbox][data-slug="'+p.slug+'"]').checked}));await api('/api/admin/config',{method:'PUT',body:JSON.stringify({plans})});showStatus('Plan settings saved.');await refresh()}catch(e){showStatus(e.message,true)}});
+$('keyform').addEventListener('submit',async e=>{e.preventDefault();const keys=$('keylist').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!keys.length)return showStatus('Paste at least one key.',true);if(keys.length>200)return showStatus('Add at most 200 keys per batch.',true);if(!confirm('Add '+keys.length+' key(s) to '+$('keyplan').selectedOptions[0].textContent+'?'))return;
+ try{const result=await api('/api/admin/keys',{method:'POST',body:JSON.stringify({planSlug:$('keyplan').value,keys})});$('keylist').value='';showStatus(result.added+' key(s) added.');await refresh()}catch(e){showStatus(e.message,true)}});
+async function removeKey(id){if(!confirm('Permanently remove this unused key? This cannot be undone.'))return;try{await api('/api/admin/keys?id='+encodeURIComponent(id),{method:'DELETE'});showStatus('Unused key removed.');await refresh()}catch(e){showStatus(e.message,true)}}
+$('refresh').addEventListener('click',refresh);
+init();
+</script>
+</body></html>

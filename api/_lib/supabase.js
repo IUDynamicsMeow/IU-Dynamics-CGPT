@@ -7,8 +7,15 @@ async function db(path, options = {}) {
     headers: { apikey: SERVICE_KEY, Authorization: "Bearer " + SERVICE_KEY,
       "Content-Type": "application/json", ...(options.headers || {}) }
   });
-  if (!response.ok) throw new Error("Database request failed.");
   const text = await response.text();
+  if (!response.ok) {
+    let details = {};
+    try { details = text ? JSON.parse(text) : {}; } catch {}
+    const error = new Error("Database request failed.");
+    error.statusCode = response.status;
+    error.code = details.code;
+    throw error;
+  }
   return text ? JSON.parse(text) : null;
 }
 module.exports = { db };
