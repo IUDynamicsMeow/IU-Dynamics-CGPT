@@ -26,9 +26,11 @@ module.exports = async function handler(req, res) {
     if (!settings?.length || settings[0].value !== true) return res.status(503).json({ error: "Work.ink is temporarily disabled." });
     const attemptId = crypto.randomUUID();
     const appUrl = process.env.APP_URL || (process.env.VERCEL_ENV === "production" ? "https://iu-dynamics.vercel.app" : process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://iu-dynamics.vercel.app");
-    const destination = new URL("/api/workink/return", appUrl);
-    destination.searchParams.set("attempt", attemptId);
-    destination.searchParams.set("token", "{TOKEN}");
+    // Keep Work.ink's {TOKEN} marker literal in the destination URL.
+    // URLSearchParams would encode the braces inside the nested URL and may
+    // prevent Work.ink from substituting the real completion token.
+    const destination = appUrl + "/api/workink/return?attempt=" +
+      encodeURIComponent(attemptId) + "&token={TOKEN}";
     const overrideUrl = new URL("https://work.ink/_api/v2/override");
     overrideUrl.searchParams.set("destination", destination.toString());
     const overrideResponse = await fetch(overrideUrl, { headers: { "X-Api-Key": apiKey } });
