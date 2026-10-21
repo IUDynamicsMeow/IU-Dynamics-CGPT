@@ -13,28 +13,39 @@ module.exports = async function handler(req, res) {
   const attemptId = typeof req.query?.attempt === "string" ? req.query.attempt : "";
   const token = typeof req.query?.token === "string" ? req.query.token : "";
   const home = process.env.APP_URL || (process.env.VERCEL_ENV === "production" ? "https://iu-dynamics.vercel.app" : process.env.VERCEL_URL ? "https://" + process.env.VERCEL_URL : "https://iu-dynamics.vercel.app");
+  const reject = (reason, code = "not-verified") => {
+    // Deliberately log only a fixed reason label; never log tokens, cookies, or session IDs.
+    console.warn("workink_return_rejected", { reason });
+    return res.redirect(302, home + "/?unlock=" + code);
+  };
   if (sessionToken.length < 40 || sessionToken.length > 100 || !attemptId || !token)
-    return res.redirect(302, home + "/?unlock=not-verified");
+    return reject("missing_cookie_attempt_or_token");
   try {
     const hash = crypto.createHash("sha256").update(sessionToken).digest("hex");
     const sessions = await db("iu_unlock_sessions?select=id,provider,required_links,status,expires_at&session_token_hash=eq." + hash + "&limit=1");
     const session = sessions?.[0];
     if (!session || session.provider !== "workink" || session.status !== "in_progress" || new Date(session.expires_at) <= new Date())
-      return res.redirect(302, home + "/?unlock=session-expired");
+      return reject("session_missing_wrong_provider_inactive_or_expired", "session-expired");
     const attempts = await db("iu_link_attempts?select=id,status&session_id=eq." + session.id + "&id=eq." + encodeURIComponent(attemptId) + "&provider=eq.workink&limit=1");
     if (!attempts?.length || attempts[0].status !== "created")
-      return res.redirect(302, home + "/?unlock=not-verified");
-    // Work.ink's documented Key System endpoint is /token/isValid/{token}.
+      return reject("attempt_missing_or_not_created");
+    // Work.ink's documented Key System endpoint validates the completion token.
     // deleteToken=1 makes each completion token single-use.
     const verify = await fetch("https://work.ink/_api/v2/token/isValid/" + encodeURIComponent(token) + "?deleteToken=1");
-    if (!verify.ok) return res.redirect(302, home + "/?unlock=not-verified");
-    const verification = await verify.json();
-    if (verification?.valid !== true) return res.redirect(302, home + "/?unlock=not-verified");
+    if (!verify.ok) return reject("workink_api_http_" + verify.status);
+    let verification;
+    try {
+      verification = await verify.json();
+    } catch {
+      return reject("workink_api_non_json_response");
+    }
+    if (verification?.valid !== true)
+      return reject("workink_token_not_valid");
     const updated = await db("iu_link_attempts?id=eq." + encodeURIComponent(attemptId) + "&status=eq.created&select=id", {
       method: "PATCH", headers: { Prefer: "return=representation" },
       body: JSON.stringify({ status: "verified", verified_at: new Date().toISOString() })
     });
-    if (!updated?.length) return res.redirect(302, home + "/?unlock=not-verified");
+    if (!updated?.length) return reject("attempt_status_update_returned_no_rows");
     const verified = await db("iu_link_attempts?select=id&session_id=eq." + session.id + "&status=eq.verified");
     const ready = (verified?.length || 0) >= session.required_links;
     if (ready) {
@@ -44,5 +55,9 @@ module.exports = async function handler(req, res) {
       });
     }
     return res.redirect(302, home + "/?unlock=" + (ready ? "ready" : "progress"));
-  } catch { return res.redirect(302, home + "/?unlock=verification-error"); }
+  } catch (error) {
+    // Keep exception details out of logs in case an upstream error includes sensitive data.
+    console.error("workink_return_error", { name: error?.name || "UnknownError" });
+    return res.redirect(302, home + "/?unlock=verification-error");
+  }
 };
