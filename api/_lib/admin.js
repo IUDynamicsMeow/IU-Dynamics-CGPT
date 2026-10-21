@@ -1,4 +1,5 @@
 const { db } = require("./supabase");
+const { allowRequest } = require("./rate-limit");
 
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -40,6 +41,11 @@ async function requireAdmin(req) {
     error.statusCode = 403;
     throw error;
   }
+  if (!(await allowRequest(req, "admin-api", 80, 600, email))) {
+    const error = new Error("Too many admin requests. Please wait a few minutes.");
+    error.statusCode = 429;
+    throw error;
+  }
   return { email };
 }
 
@@ -58,7 +64,7 @@ async function audit(actor, action, targetType, targetId, details = {}) {
 }
 
 function fail(res, error) {
-  const status = [401, 403].includes(error?.statusCode) ? error.statusCode : 500;
+  const status = [401, 403, 429].includes(error?.statusCode) ? error.statusCode : 500;
   return res.status(status).json({
     error: status === 500 ? "The admin request could not be completed. Please try again." : error.message
   });
