@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 const { db } = require("../_lib/supabase");
+const { allowRequest } = require("../_lib/rate-limit");
 function cookieValue(req, name) {
   const raw = req.headers?.cookie || "";
   const pair = raw.split(";").map(s => s.trim()).find(s => s.startsWith(name + "="));
@@ -12,6 +13,7 @@ module.exports = async function handler(req, res) {
   const baseLink = process.env.WORKINK_KEY_LINK_URL, apiKey = process.env.WORKINK_API_KEY;
   if (!baseLink || !apiKey) return res.status(503).json({ error: "The link provider is not configured." });
   try {
+    if (!(await allowRequest(req, "workink-start", 20))) return res.status(429).json({ error: "Too many link requests. Please wait a few minutes and try again." });
     const sessionToken = cookieValue(req, "iu_session");
     if (sessionToken.length < 40 || sessionToken.length > 100)
       return res.status(400).json({ error: "Your access session is missing. Please start again." });
