@@ -9,7 +9,7 @@
 </style>
 </head>
 <body><main>
-<header><div><h1>IU Dynamics Admin</h1><p style="margin:4px 0 0">Manage access plans, providers and license inventory.</p></div><button id="signout" class="secondary hidden">Sign out</button></header>
+<header><div><h1>IU Dynamics Admin</h1><p style="margin:4px 0 0">Manage access plans, providers and pre-made account inventory.</p></div><button id="signout" class="secondary hidden">Sign out</button></header>
 <div id="status" class="status" role="status" aria-live="polite"></div>
 <section id="login" class="panel">
 <h2>Administrator sign-in</h2>
@@ -24,15 +24,17 @@
 <label class="toggle"><input id="workink" type="checkbox"> Enable Work.ink</label>
 <p class="small">Work.ink can be enabled here. Cuty.io is still being set up. It stays locked until trusted server-side completion verification is confirmed; creating a short link is not proof of completion.</p>
 <button id="saveproviders">Save provider settings</button></section>
-<section class="panel"><h2>Inventory overview</h2><div id="stats" class="stats"></div><p class="small">Key values are not shown in the inventory list. Claimed keys cannot be removed here.</p><button id="refresh" class="secondary">Refresh data</button></section>
+<section class="panel"><h2>Inventory overview</h2><div id="stats" class="stats"></div><p class="small">Passwords are never shown in the inventory list. Claimed accounts cannot be removed here.</p><button id="refresh" class="secondary">Refresh data</button></section>
 </div>
 <section class="panel"><h2>Access plans</h2><p>Link-count changes apply to new sessions; sessions already started keep their original requirement.</p><div id="plans" class="plans"></div><div class="row" style="margin-top:14px"><button id="saveplans">Save plan changes</button></div></section>
-<section class="panel"><h2>Add license keys</h2>
-<form id="keyform"><div class="field"><label for="keyplan">Plan</label><select id="keyplan" required></select></div>
-<div class="field"><label for="keylist">Keys (one per line; up to 200)</label><textarea id="keylist" required placeholder="Paste one software key per line"></textarea></div>
-<button id="addkeys" type="submit">Add keys securely</button></form>
+<section class="panel"><h2>Add a pre-made account</h2>
+<form id="accountform"><div class="field"><label for="keyplan">Plan</label><select id="keyplan" required></select></div>
+<div class="field"><label for="accountusername">Username</label><input id="accountusername" required maxlength="200" autocomplete="off"></div>
+<div class="field"><label for="accountpassword">Password</label><input id="accountpassword" type="password" required maxlength="1000" autocomplete="new-password"></div>
+<p class="small muted">Credentials are stored server-side and are only revealed to a customer after verified completion. Add accounts one at a time.</p>
+<button id="addaccount" type="submit">Add account securely</button></form>
 </section>
-<section class="panel"><h2>Key inventory</h2><div class="table-wrap"><table><thead><tr><th>Plan</th><th>Status</th><th>Added</th><th>Claimed</th><th>Action</th></tr></thead><tbody id="keys"></tbody></table></div><p id="keynote" class="small muted"></p></section>
+<section class="panel"><h2>Account inventory</h2><div class="table-wrap"><table><thead><tr><th>Plan</th><th>Username</th><th>Status</th><th>Added</th><th>Claimed</th><th>Action</th></tr></thead><tbody id="keys"></tbody></table></div><p id="keynote" class="small muted"></p></section>
 <section class="panel"><h2>Recent admin activity</h2><div class="table-wrap"><table><thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th></tr></thead><tbody id="audit"></tbody></table></div></section>
 </div>
 </main>
@@ -60,7 +62,7 @@ async function api(path,options={}){
  const data=await r.json().catch(()=>({error:'Unexpected server response'}));if(!r.ok)throw new Error(data.error||'Request failed.');return data;
 }
 async function loadDashboard(){
- try{config=await api('/api/admin/config');inventory=await api('/api/admin/keys');render();$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');$('signout').classList.remove('hidden');clearStatus()}
+ try{config=await api('/api/admin/config');inventory=await api('/api/admin/accounts');render();$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');$('signout').classList.remove('hidden');clearStatus()}
  catch(e){showStatus(e.message,true);if(/sign in|authorized|expired/i.test(e.message)){await client.auth.signOut();showLogin()}}
 }
 function render(){
@@ -76,9 +78,9 @@ function render(){
  }
  const stats=$('stats');stats.replaceChildren();for(const [name,value] of Object.entries(inventory.counts)){const card=document.createElement('div');card.className='stat';const strong=document.createElement('strong');strong.textContent=value;const label=document.createElement('span');label.textContent=name;card.append(strong,label);stats.append(card)}
  const tbody=$('keys');tbody.replaceChildren();
- for(const k of inventory.keys){const tr=document.createElement('tr');for(const v of [k.planName,k.status,safeDate(k.createdAt),safeDate(k.claimedAt)]){const td=document.createElement('td');td.textContent=v;tr.append(td)}
- const action=document.createElement('td');if(k.status==='available'){const b=document.createElement('button');b.className='danger';b.textContent='Remove';b.addEventListener('click',()=>removeKey(k.id));action.append(b)}else action.textContent='—';tr.append(action);tbody.append(tr)}
- $('keynote').textContent=inventory.truncated?'Showing the latest 500 records. Counts reflect these listed records.':'Key values are deliberately excluded from this list.';
+ for(const k of inventory.accounts){const tr=document.createElement('tr');for(const v of [k.planName,k.username,k.status,safeDate(k.createdAt),safeDate(k.claimedAt)]){const td=document.createElement('td');td.textContent=v;tr.append(td)}
+ const action=document.createElement('td');if(k.status==='available'){const b=document.createElement('button');b.className='danger';b.textContent='Remove';b.addEventListener('click',()=>removeAccount(k.id));action.append(b)}else action.textContent='—';tr.append(action);tbody.append(tr)}
+ $('keynote').textContent=inventory.truncated?'Showing the latest 500 records. Counts reflect these listed records.':'Usernames and passwords are deliberately excluded from this list.';
  const audit=$('audit');audit.replaceChildren();for(const a of config.audit||[]){const tr=document.createElement('tr');const details=JSON.stringify(a.details||{});for(const v of [safeDate(a.created_at),a.actor_email,a.action,(a.target_type||'')+(a.target_id?' · '+a.target_id:''),details]){const td=document.createElement('td');td.textContent=String(v);tr.append(td)}audit.append(tr)}
 }
 async function refresh(){try{await loadDashboard()}catch(e){showStatus(e.message,true)}}
@@ -86,9 +88,9 @@ $('loginform').addEventListener('submit',async e=>{e.preventDefault();clearStatu
 $('signout').addEventListener('click',async()=>{await client?.auth.signOut();currentSession=null;showLogin();showStatus('You have signed out.')});
 $('saveproviders').addEventListener('click',async()=>{try{await api('/api/admin/config',{method:'PUT',body:JSON.stringify({providers:{cuty:$('cuty').checked,workink:$('workink').checked}})});showStatus('Provider settings saved.');await refresh()}catch(e){showStatus(e.message,true)}});
 $('saveplans').addEventListener('click',async()=>{try{const plans=config.plans.map(p=>({slug:p.slug,required_links:Number(document.querySelector('input[type=number][data-slug="'+p.slug+'"]').value),is_active:document.querySelector('input[type=checkbox][data-slug="'+p.slug+'"]').checked}));await api('/api/admin/config',{method:'PUT',body:JSON.stringify({plans})});showStatus('Plan settings saved.');await refresh()}catch(e){showStatus(e.message,true)}});
-$('keyform').addEventListener('submit',async e=>{e.preventDefault();const keys=$('keylist').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);if(!keys.length)return showStatus('Paste at least one key.',true);if(keys.length>200)return showStatus('Add at most 200 keys per batch.',true);if(!confirm('Add '+keys.length+' key(s) to '+$('keyplan').selectedOptions[0].textContent+'?'))return;
- try{const result=await api('/api/admin/keys',{method:'POST',body:JSON.stringify({planSlug:$('keyplan').value,keys})});$('keylist').value='';showStatus(result.added+' key(s) added.');await refresh()}catch(e){showStatus(e.message,true)}});
-async function removeKey(id){if(!confirm('Permanently remove this unused key? This cannot be undone.'))return;try{await api('/api/admin/keys?id='+encodeURIComponent(id),{method:'DELETE'});showStatus('Unused key removed.');await refresh()}catch(e){showStatus(e.message,true)}}
+$('accountform').addEventListener('submit',async e=>{e.preventDefault();const username=$('accountusername').value.trim(),password=$('accountpassword').value;if(!username||!password)return showStatus('Enter both username and password.',true);if(!confirm('Add this account to '+$('keyplan').selectedOptions[0].textContent+'?'))return;
+ try{const result=await api('/api/admin/accounts',{method:'POST',body:JSON.stringify({planSlug:$('keyplan').value,username,password})});$('accountusername').value='';$('accountpassword').value='';showStatus('Account added securely.');await refresh()}catch(e){showStatus(e.message,true)}});
+async function removeAccount(id){if(!confirm('Permanently remove this unused account? This cannot be undone.'))return;try{await api('/api/admin/accounts?id='+encodeURIComponent(id),{method:'DELETE'});showStatus('Unused account removed.');await refresh()}catch(e){showStatus(e.message,true)}}
 $('refresh').addEventListener('click',refresh);
 init();
 </script>
