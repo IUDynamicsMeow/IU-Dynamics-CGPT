@@ -19,6 +19,8 @@ module.exports = async function handler(req, res) {
       return res.status(503).json({ error: "Work.ink is temporarily disabled." });
     const plans = await db("iu_plans?select=id,slug,required_links&slug=eq." + encodeURIComponent(slug) + "&is_active=eq.true&limit=1");
     if (!plans?.length) return res.status(400).json({ error: "That plan is unavailable." });
+    const stock = await db("iu_accounts?select=id&plan_id=eq." + encodeURIComponent(plans[0].id) + "&status=eq.available&limit=1");
+    if (!stock?.length) return res.status(409).json({ error: "This account category is out of stock. Please choose another plan or check back later." });
     const sessionToken = crypto.randomBytes(32).toString("base64url");
     const sessionTokenHash = crypto.createHash("sha256").update(sessionToken).digest("hex");
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();

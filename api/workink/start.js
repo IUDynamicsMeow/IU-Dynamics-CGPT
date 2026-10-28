@@ -18,10 +18,12 @@ module.exports = async function handler(req, res) {
     if (sessionToken.length < 40 || sessionToken.length > 100)
       return res.status(400).json({ error: "Your access session is missing. Please start again." });
     const hash = crypto.createHash("sha256").update(sessionToken).digest("hex");
-    const sessions = await db("iu_unlock_sessions?select=id,provider,required_links,status,expires_at&session_token_hash=eq." + hash + "&limit=1");
+    const sessions = await db("iu_unlock_sessions?select=id,plan_id,provider,required_links,status,expires_at&session_token_hash=eq." + hash + "&limit=1");
     const session = sessions?.[0];
     if (!session || session.provider !== "workink" || session.status !== "in_progress" || new Date(session.expires_at) <= new Date())
       return res.status(400).json({ error: "This access session has expired or uses an unavailable provider. Start again." });
+    const stock = await db("iu_accounts?select=id&plan_id=eq." + encodeURIComponent(session.plan_id) + "&status=eq.available&limit=1");
+    if (!stock?.length) return res.status(409).json({ error: "This account category has run out of stock. Your account claim cannot continue; please choose another plan or check back later." });
     const settings = await db("iu_settings?select=value&key=eq.provider_workink_enabled&limit=1");
     if (!settings?.length || settings[0].value !== true) return res.status(503).json({ error: "Work.ink is temporarily disabled." });
     const attemptId = crypto.randomUUID();
