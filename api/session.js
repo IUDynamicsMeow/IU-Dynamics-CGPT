@@ -11,12 +11,14 @@ module.exports = async function handler(req, res) {
     if (!/^[a-z0-9_-]{2,40}$/.test(slug)) return res.status(400).json({ error: "Choose a valid plan." });
     if (!["workink", "cuty"].includes(provider)) return res.status(400).json({ error: "Choose a valid link provider." });
     if (!(await allowRequest(req, "session-create", 8))) return res.status(429).json({ error: "Too many attempts. Please wait a few minutes before starting another session." });
-    if (provider !== "workink") return res.status(503).json({ error: "Cuty.io completion verification is not ready yet. Please use Work.ink." });
-    if (!process.env.WORKINK_KEY_LINK_URL || !process.env.WORKINK_API_KEY)
-      return res.status(503).json({ error: "Work.ink is not configured yet." });
-    const settings = await db("iu_settings?select=key,value&key=eq.provider_workink_enabled&limit=1");
+    const providerSetting = provider === "workink" ? "provider_workink_enabled" : "provider_cuty_enabled";
+    const providerConfigured = provider === "workink"
+      ? Boolean(process.env.WORKINK_KEY_LINK_URL && process.env.WORKINK_API_KEY)
+      : Boolean(process.env.CUTY_API_KEY || process.env.CUTI_API_KEY);
+    if (!providerConfigured) return res.status(503).json({ error: provider === "cuty" ? "Cuty.io Quick Link is not configured yet." : "Work.ink is not configured yet." });
+    const settings = await db("iu_settings?select=key,value&key=eq." + providerSetting);
     if (!settings?.length || settings[0].value !== true)
-      return res.status(503).json({ error: "Work.ink is temporarily disabled." });
+      return res.status(503).json({ error: provider === "cuty" ? "Cuty.io is temporarily disabled." : "Work.ink is temporarily disabled." });
     const plans = await db("iu_plans?select=id,slug,required_links&slug=eq." + encodeURIComponent(slug) + "&is_active=eq.true&limit=1");
     if (!plans?.length) return res.status(400).json({ error: "That plan is unavailable." });
     const stock = await db("iu_accounts?select=id&plan_id=eq." + encodeURIComponent(plans[0].id) + "&status=eq.available&limit=1");
